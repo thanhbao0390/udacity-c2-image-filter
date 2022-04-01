@@ -40,9 +40,9 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
       (filteredpath) => {
         res.sendFile(filteredpath);
         
-        fs.readdir(__dirname + "/util/tmp/", (err, files) => {
-          const fileList: String[] = [];
-          files.forEach(file => {
+        fs.readdir(__dirname + "/util/tmp/", (err: any, files: any) => {
+          const fileList: string[] = [];
+          files.forEach((file: any) => {
             fileList.push(__dirname + "/util/tmp/" + file);
           });
           deleteLocalFiles(fileList);
