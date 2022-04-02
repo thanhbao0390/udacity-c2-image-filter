@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response, NextFunction, Errback } from 'express';
 import bodyParser from 'body-parser';
-const fs = require("fs");
+import fs from "fs";
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
 (async () => {
@@ -9,10 +9,13 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   const app = express();
 
   // Set the network port
-  const port = process.env.PORT || 8082;
+  const port:number|string = process.env.PORT || 8082;
   
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
+
+  // path save image 
+  const dir_save:string = "/util/tmp/";
 
   // IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
@@ -29,37 +32,33 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
-  app.get( "/filteredimage", async ( req, res ) => {
+  app.get( "/filteredimage", async ( req: Request, res: Response, next: NextFunction ) => {
     let { image_url } = req.query;
     // check Caption is valid
     if (!image_url) {
-      return res.status(500).send({ message: 'Bad request. Please add query param image_url.' });
+      return next('Bad request. Please add query param image_url.');
     }
-
-    await filterImageFromURL(image_url).then(
-      (filteredpath) => {
-        res.sendFile(filteredpath);
-        
-        fs.readdir(__dirname + "/util/tmp/", (err: any, files: any) => {
-          const fileList: string[] = [];
-          files.forEach((file: any) => {
-            fileList.push(__dirname + "/util/tmp/" + file);
-          });
-          deleteLocalFiles(fileList);
+    try {
+      let absolutePath: string = await filterImageFromURL(image_url) as string;
+      res.status(200).sendFile(absolutePath);
+      fs.readdir(__dirname + dir_save, (err: Error, files: string[]) => {
+        const fileList: string[] = [];
+        files.forEach((file: string) => {
+          fileList.push(__dirname + dir_save + file);
         });
-      },
-      (err) => {
-        return res.status(442).send({ message: 'It was unable to process.' + err});
-      }
-    );
-
+        deleteLocalFiles(fileList);
+      });
+      return;
+    } catch (e) {
+      return next('It was unable to process.' + e);
+    }
    
   } );
   
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async ( req, res ) => {
-    res.send("try GET /filteredimage?image_url={{}}")
+  app.get( "/", async ( req: Request, res: Response ) => {
+    return res.send("try GET /filteredimage?image_url={{}}")
   } );
   
 
